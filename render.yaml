@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: vision-tailor-backend
+    env: python
+    buildCommand: "pip install -r backend/requirements.txt"
+    startCommand: "cd backend && gunicorn server:app"
+    rootDir: "."
+    envVars:
+      - key: CORS_ORIGINS
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PYTHON_VERSION
+        value: 3.10.11
