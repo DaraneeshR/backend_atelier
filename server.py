@@ -29,8 +29,19 @@ from gender_config import load_config
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("JWT_SECRET", "dev-secret-change-in-production")
-cors_origins = os.environ.get("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",")
-CORS(app, origins=cors_origins)
+cors_origins = os.environ.get(
+    "CORS_ORIGINS",
+    "http://localhost:5173,http://127.0.0.1:5173"
+).split(",")
+
+CORS(
+    app,
+    origins=cors_origins,
+    supports_credentials=True,
+    allow_headers=["Content-Type", "Authorization"],
+    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    max_age=86400
+)
 
 db = Database()
 db.init_db()
@@ -38,6 +49,14 @@ db.init_db()
 calc = MeasurementCalculator()
 engine = AdjustmentEngine()
 classifier = SizeClassifier()
+
+@app.route("/health")
+def health():
+    return {"status": "running"}
+
+@app.before_request
+def log_request():
+    print("Incoming:", request.method, request.path)
 
 # ── JWT helpers ──────────────────────────────────────────────────────────────
 
@@ -80,7 +99,7 @@ def token_required(f):
 
 # ── Auth endpoints ───────────────────────────────────────────────────────────
 
-@app.route("/api/auth/signup", methods=["POST"])
+@app.route("/api/auth/signup", methods=["POST", "OPTIONS"])
 def signup():
     data = request.get_json()
     name = (data.get("name") or "").strip()
@@ -111,8 +130,7 @@ def signup():
     finally:
         conn.close()
 
-
-@app.route("/api/auth/login", methods=["POST"])
+@app.route("/api/auth/login", methods=["POST", "OPTIONS"])
 def login():
     data = request.get_json()
     email = (data.get("email") or "").strip().lower()
