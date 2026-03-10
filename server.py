@@ -28,6 +28,14 @@ from gender_config import load_config
 # ── App setup ────────────────────────────────────────────────────────────────
 
 app = Flask(__name__)
+@app.before_request
+def handle_options():
+    if request.method == "OPTIONS":
+        response = jsonify({"status": "ok"})
+        response.headers["Access-Control-Allow-Origin"] = request.headers.get("Origin", "*")
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        return response, 200
 app.config["SECRET_KEY"] = os.environ.get("JWT_SECRET", "dev-secret-change-in-production")
 cors_origins = os.environ.get(
     "CORS_ORIGINS",
@@ -36,11 +44,8 @@ cors_origins = os.environ.get(
 
 CORS(
     app,
-    origins=cors_origins,
-    supports_credentials=True,
-    allow_headers=["Content-Type", "Authorization"],
-    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    max_age=86400
+    resources={r"/api/*": {"origins": cors_origins}},
+    supports_credentials=True
 )
 
 db = Database()
@@ -99,7 +104,7 @@ def token_required(f):
 
 # ── Auth endpoints ───────────────────────────────────────────────────────────
 
-@app.route("/api/auth/signup", methods=["POST", "OPTIONS"])
+@app.route("/api/auth/signup", methods=["POST"])
 def signup():
     data = request.get_json()
     name = (data.get("name") or "").strip()
@@ -130,7 +135,7 @@ def signup():
     finally:
         conn.close()
 
-@app.route("/api/auth/login", methods=["POST", "OPTIONS"])
+@app.route("/api/auth/login", methods=["POST"])
 def login():
     data = request.get_json()
     email = (data.get("email") or "").strip().lower()
